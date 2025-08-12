@@ -26,7 +26,7 @@ poetry shell
 git init
 
 # Create and switch to development branches for each checkpoint
-git checkout -b checkpoint-1-enviroment-setup
+git checkout -b checkpoint-1-env-setup
 git checkout -b checkpoint-1-neural-nets
 git checkout -b checkpoint-2-rnn-lstm
 git checkout -b checkpoint-3-attention
