@@ -47,11 +47,12 @@ class EncoderLayer:
         """
         # Self-attention with residual connection
         attn_output, _ = self.self_attention.forward(x, x, x)
-        x = self.norm1(x + attn_output)
+        x = self.norm1.forward(x + attn_output)
+
         
         # Feed-forward with residual connection
         ff_output = self.ff_network.forward(x)
-        x = self.norm2(x + ff_output)
+        x = self.norm2.forward(x + cross_attn_output)
         
         return x
 
