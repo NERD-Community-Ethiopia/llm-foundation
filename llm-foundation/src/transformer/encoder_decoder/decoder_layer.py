@@ -2,7 +2,7 @@
 Decoder Layer Implementation
 """
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 from ..attention_layers.multi_head_attention import MultiHeadAttention
 
 class DecoderLayer:
@@ -39,7 +39,13 @@ class DecoderLayer:
         self.norm2 = LayerNormalization(d_model)
         self.norm3 = LayerNormalization(d_model)
     
-    def forward(self, x: np.ndarray, encoder_output: np.ndarray) -> np.ndarray:
+    def forward(
+        self,
+        x: np.ndarray,
+        encoder_output: np.ndarray,
+        tgt_causal: bool = True,
+        encoder_padding_mask: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
         """
         Forward pass through decoder layer
         
@@ -51,15 +57,28 @@ class DecoderLayer:
             Output tensor
         """
         # Create causal mask for self-attention
-        seq_length = x.shape[1]
-        causal_mask = self.self_attention.create_causal_mask(seq_length)
+        mask_self = None
+        if tgt_causal:
+            seq_length = x.shape[1]
+            causal_mask = self.self_attention.create_causal_mask(seq_length)
+            # reduce to (1, q, k) which will broadcast over batch and heads
+            mask_self = causal_mask[None, :, :]
         
         # Masked self-attention with residual connection
-        attn_output, _ = self.self_attention.forward(x, x, x, causal_mask)
+        attn_output, _ = self.self_attention.forward(x, x, x, mask_self)
         x = self.norm1(x + attn_output)
         
         # Cross-attention with residual connection
-        cross_output, _ = self.cross_attention.forward(x, encoder_output, encoder_output)
+        # Prepare encoder padding mask for cross-attention if provided
+        mask_cross = None
+        if encoder_padding_mask is not None:
+            if encoder_padding_mask.ndim == 2:
+                pad = encoder_padding_mask.astype(float) * -1e9  # (batch, k_len)
+                mask_cross = pad[:, None, :]  # (batch, 1, k_len)
+            else:
+                mask_cross = encoder_padding_mask
+
+        cross_output, _ = self.cross_attention.forward(x, encoder_output, encoder_output, mask_cross)
         x = self.norm2(x + cross_output)
         
         # Feed-forward with residual connection

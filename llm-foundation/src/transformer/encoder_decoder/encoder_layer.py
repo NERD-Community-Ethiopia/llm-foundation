@@ -2,7 +2,7 @@
 Encoder Layer Implementation
 """
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 from ..attention_layers.multi_head_attention import MultiHeadAttention
 
 class EncoderLayer:
@@ -35,7 +35,7 @@ class EncoderLayer:
         self.norm1 = LayerNormalization(d_model)
         self.norm2 = LayerNormalization(d_model)
     
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: np.ndarray, src_key_padding_mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Forward pass through encoder layer
         
@@ -45,14 +45,22 @@ class EncoderLayer:
         Returns:
             Output tensor
         """
-        # Self-attention with residual connection
-        attn_output, _ = self.self_attention.forward(x, x, x)
-        x = self.norm1.forward(x + attn_output)
+        # Prepare mask shape broadcastable to (batch, q_len, k_len): use (batch, 1, k_len)
+        mask = None
+        if src_key_padding_mask is not None:
+            if src_key_padding_mask.ndim == 2:
+                pad = src_key_padding_mask.astype(float) * -1e9  # (batch, k_len)
+                mask = pad[:, None, :]  # (batch, 1, k_len)
+            else:
+                mask = src_key_padding_mask
 
+        # Self-attention with residual connection
+        attn_output, _ = self.self_attention.forward(x, x, x, mask)
+        x = self.norm1(x + attn_output)
         
         # Feed-forward with residual connection
         ff_output = self.ff_network.forward(x)
-        x = self.norm2.forward(x + cross_attn_output)
+        x = self.norm2(x + ff_output)
         
         return x
 

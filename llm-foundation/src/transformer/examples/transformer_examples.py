@@ -54,8 +54,11 @@ def simple_translation_example():
     print("Source batch shape:", src_batch.shape)
     print("Target batch shape:", tgt_batch.shape)
     
-    # Forward pass
-    logits = transformer.forward(src_batch, tgt_batch)
+    # Build padding mask for source (PAD token = 0)
+    src_pad_mask = (src_batch == vocab['<PAD>'])
+
+    # Forward pass with source padding mask
+    logits = transformer.forward(src_batch, tgt_batch, src_key_padding_mask=src_pad_mask)
     print("Logits shape:", logits.shape)
     
     # Generate translation

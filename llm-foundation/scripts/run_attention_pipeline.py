@@ -5,15 +5,21 @@ Attention Pipeline Runner
 import sys
 import os
 
-# Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+# Add src to path (scripts/ is sibling to src/)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+SRC_PATH = os.path.join(PROJECT_ROOT, 'src')
+
+# Add both project root (so 'src' is a top-level package) and the 'src' path itself
+for p in (PROJECT_ROOT, SRC_PATH):
+    if p not in sys.path:
+        sys.path.append(p)
 
 def main():
     print("🚀 Running Attention Mechanism Pipeline\n")
     
     try:
         # Import and run attention examples
-        from attention.examples.attention_examples import (
+        from src.attention.examples.attention_examples import (
             basic_attention_example,
             self_attention_example, 
             multi_head_attention_example,
