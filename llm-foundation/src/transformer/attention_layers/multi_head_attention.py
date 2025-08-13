@@ -51,12 +51,17 @@ class MultiHeadAttention:
         Returns:
             Attention output and attention weights
         """
-        # Compute attention scores: (batch_size, seq_length, seq_length)
+        # Compute attention scores: (batch_size, q_len, k_len)
         scores = np.matmul(Q, K.transpose(0, 2, 1)) / np.sqrt(self.d_k)
         
         # Apply mask if provided
         if mask is not None:
-            scores = scores + mask
+            # Support mask shapes: (batch, 1, k_len) or (1, q_len, k_len) or (batch, q_len, k_len)
+            if mask.ndim == 3:
+                scores = scores + mask
+            else:
+                # If provided as (k_len, k_len) causal, expand to (1, q_len, k_len)
+                scores = scores + mask[None, :, :]
         
         # Apply softmax
         attention_weights = self.softmax(scores)
@@ -99,6 +104,7 @@ class MultiHeadAttention:
         Returns:
             Attention output and attention weights
         """
+        # Expect (batch, seq_len, d_model)
         batch_size, seq_length, d_model = queries.shape
         
         # Linear transformations

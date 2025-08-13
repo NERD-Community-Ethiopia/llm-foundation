@@ -55,7 +55,7 @@ class Transformer:
         # Layer normalization
         self.norm = LayerNormalization(d_model)
     
-    def encode(self, x: np.ndarray) -> np.ndarray:
+    def encode(self, x: np.ndarray, src_key_padding_mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Encode input sequence
         
@@ -76,11 +76,16 @@ class Transformer:
         # Pass through encoder layers
         encoded = embedded
         for layer in self.encoder_layers:
-            encoded = layer.forward(encoded)
+            encoded = layer.forward(encoded, src_key_padding_mask)
         
         return encoded
     
-    def decode(self, x: np.ndarray, encoder_output: np.ndarray) -> np.ndarray:
+    def decode(
+        self,
+        x: np.ndarray,
+        encoder_output: np.ndarray,
+        encoder_padding_mask: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
         """
         Decode sequence
         
@@ -102,14 +107,14 @@ class Transformer:
         # Pass through decoder layers
         decoded = embedded
         for layer in self.decoder_layers:
-            decoded = layer.forward(decoded, encoder_output)
+            decoded = layer.forward(decoded, encoder_output, tgt_causal=True, encoder_padding_mask=encoder_padding_mask)
         
         # Final layer normalization
         decoded = self.norm.forward(decoded)
         
         return decoded
     
-    def forward(self, src: np.ndarray, tgt: np.ndarray) -> np.ndarray:
+    def forward(self, src: np.ndarray, tgt: np.ndarray, src_key_padding_mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Forward pass through Transformer
         
@@ -121,10 +126,10 @@ class Transformer:
             Output logits
         """
         # Encode source sequence
-        encoder_output = self.encode(src)
+        encoder_output = self.encode(src, src_key_padding_mask)
         
         # Decode target sequence
-        decoder_output = self.decode(tgt, encoder_output)
+        decoder_output = self.decode(tgt, encoder_output, encoder_padding_mask=src_key_padding_mask)
         
         # Project to vocabulary
         logits = np.dot(decoder_output, self.output_projection)
