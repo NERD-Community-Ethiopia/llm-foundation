@@ -119,7 +119,7 @@ class TransformerTrainer:
         exp_logits = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
         probs = exp_logits / np.sum(exp_logits, axis=-1, keepdims=True)
         
-        # Compute loss
+        # Compute loss (teacher forcing on next-token prediction)
         loss = 0.0
         gradients = np.zeros_like(logits)
         
@@ -137,9 +137,8 @@ class TransformerTrainer:
                 
                 # Compute gradients
                 gradients[b, t, target_token] = target_prob - 1
-                for v in range(vocab_size):
-                    if v != target_token:
-                        gradients[b, t, v] = probs[b, t, v]
+                gradients[b, t, :] += probs[b, t, :]
+                gradients[b, t, target_token] -= 1
         
         # Average loss
         loss = loss / (batch_size * seq_length)

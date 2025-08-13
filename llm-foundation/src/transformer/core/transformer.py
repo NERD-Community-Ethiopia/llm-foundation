@@ -55,7 +55,13 @@ class Transformer:
         # Layer normalization
         self.norm = LayerNormalization(d_model)
     
-    def encode(self, x: np.ndarray) -> np.ndarray:
+    def _embed_with_pos(self, token_ids: np.ndarray) -> np.ndarray:
+        """Lookup embeddings and add positional encoding. token_ids: (batch, seq_len)"""
+        embedded = self.embedding[token_ids]  # (batch, seq_len, d_model)
+        embedded = self.pos_encoding(embedded)
+        return embedded
+
+    def encode(self, x: np.ndarray, src_padding_mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Encode input sequence
         
@@ -66,21 +72,24 @@ class Transformer:
             Encoded sequence
         """
         batch_size, seq_length = x.shape
-        
-        # Embedding
-        embedded = self.embedding[x]
-        
-        # Add positional encoding
-        embedded = self.pos_encoding(embedded)
+
+        # Embedding + positional encoding
+        embedded = self._embed_with_pos(x)
         
         # Pass through encoder layers
         encoded = embedded
         for layer in self.encoder_layers:
-            encoded = layer.forward(encoded)
+            encoded = layer.forward(encoded, padding_mask=src_padding_mask)
         
         return encoded
     
-    def decode(self, x: np.ndarray, encoder_output: np.ndarray) -> np.ndarray:
+    def decode(
+        self,
+        x: np.ndarray,
+        encoder_output: np.ndarray,
+        tgt_padding_mask: Optional[np.ndarray] = None,
+        src_padding_mask: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
         """
         Decode sequence
         
@@ -92,24 +101,26 @@ class Transformer:
             Decoded sequence
         """
         batch_size, seq_length = x.shape
-        
-        # Embedding
-        embedded = self.embedding[x]
-        
-        # Add positional encoding
-        embedded = self.pos_encoding(embedded)
+
+        # Embedding + positional encoding
+        embedded = self._embed_with_pos(x)
         
         # Pass through decoder layers
         decoded = embedded
         for layer in self.decoder_layers:
-            decoded = layer.forward(decoded, encoder_output)
+            decoded = layer.forward(
+                decoded,
+                encoder_output,
+                tgt_padding_mask=tgt_padding_mask,
+                src_padding_mask=src_padding_mask,
+            )
         
         # Final layer normalization
         decoded = self.norm.forward(decoded)
         
         return decoded
     
-    def forward(self, src: np.ndarray, tgt: np.ndarray) -> np.ndarray:
+    def forward(self, src: np.ndarray, tgt: np.ndarray, pad_token_id: int = 0) -> np.ndarray:
         """
         Forward pass through Transformer
         
@@ -120,11 +131,22 @@ class Transformer:
         Returns:
             Output logits
         """
+        # For masking, pass token id sequences; padding id assumed pad_token_id
+        src_tokens_for_mask = src
+        tgt_tokens_for_mask = tgt
+
         # Encode source sequence
-        encoder_output = self.encode(src)
+        encoder_output = self.encode(src, src_tokens_for_mask)
         
-        # Decode target sequence
-        decoder_output = self.decode(tgt, encoder_output)
+        # Shift target right for teacher forcing: input is all but last token
+        # Keep same shape by slicing; logits will be computed for positions 1..T
+        decoder_input = tgt
+        decoder_output = self.decode(
+            decoder_input,
+            encoder_output,
+            tgt_padding_mask=tgt_tokens_for_mask,
+            src_padding_mask=src_tokens_for_mask,
+        )
         
         # Project to vocabulary
         logits = np.dot(decoder_output, self.output_projection)
@@ -132,7 +154,7 @@ class Transformer:
         return logits
     
     def generate(self, src: np.ndarray, max_length: int = 50, 
-                start_token: int = 0, end_token: int = 1) -> List[int]:
+                start_token: int = 0, end_token: int = 1, pad_token_id: int = 0) -> List[int]:
         """
         Generate sequence autoregressively
         
@@ -146,7 +168,8 @@ class Transformer:
             Generated sequence
         """
         # Encode source sequence
-        encoder_output = self.encode(src)
+        src_pad_mask = (src == pad_token_id).astype(np.int32)
+        encoder_output = self.encode(src, src_pad_mask)
         
         # Initialize target sequence
         batch_size = src.shape[0]
@@ -156,7 +179,13 @@ class Transformer:
         
         for _ in range(max_length):
             # Decode current sequence
-            decoder_output = self.decode(tgt, encoder_output)
+            decoder_pad_mask = (tgt == pad_token_id).astype(np.int32)
+            decoder_output = self.decode(
+                tgt,
+                encoder_output,
+                tgt_padding_mask=decoder_pad_mask,
+                src_padding_mask=src_pad_mask,
+            )
             
             # Get next token
             logits = np.dot(decoder_output[:, -1], self.output_projection)

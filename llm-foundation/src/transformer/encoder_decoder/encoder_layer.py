@@ -2,7 +2,7 @@
 Encoder Layer Implementation
 """
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 from ..attention_layers.multi_head_attention import MultiHeadAttention
 
 class EncoderLayer:
@@ -35,7 +35,7 @@ class EncoderLayer:
         self.norm1 = LayerNormalization(d_model)
         self.norm2 = LayerNormalization(d_model)
     
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: np.ndarray, padding_mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Forward pass through encoder layer
         
@@ -45,8 +45,14 @@ class EncoderLayer:
         Returns:
             Output tensor
         """
+        # Build broadcastable mask: (batch, 1, 1, seq_len)
+        attn_mask = None
+        if padding_mask is not None:
+            # padding_mask expected shape: (batch, seq_len)
+            attn_mask = self.self_attention.create_padding_mask(padding_mask)
+
         # Self-attention with residual connection
-        attn_output, _ = self.self_attention.forward(x, x, x)
+        attn_output, _ = self.self_attention.forward(x, x, x, attn_mask)
         x = self.norm1(x + attn_output)
         
         # Feed-forward with residual connection
