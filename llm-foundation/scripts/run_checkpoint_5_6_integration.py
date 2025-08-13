@@ -137,9 +137,9 @@ def demo_integration():
         end_token=target_tokenizer.end_idx
     )
     
-    # Decode generated tokens
-    generated_text = target_tokenizer.decode(generated_tokens[0], remove_special_tokens=True)
-    print(f"Generated tokens: {generated_tokens[0]}")
+    # Decode generated tokens (use the full list, not a single int)
+    print(f"Generated tokens: {generated_tokens}")
+    generated_text = target_tokenizer.decode(generated_tokens, remove_special_tokens=True)
     print(f"Generated text: '{generated_text}'")
     
     # Step 5: Integration - Training Preparation
