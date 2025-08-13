@@ -9,9 +9,9 @@ import sys
 import os
 
 # Add the src directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+#sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
-from transformer.complete.transformer import CompleteTransformer
+from ..complete.transformer import CompleteTransformer
 
 def create_ethiopian_vocab():
     """Create simple Ethiopian vocabulary"""
