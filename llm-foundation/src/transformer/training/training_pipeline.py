@@ -224,7 +224,9 @@ class TransformerTrainer:
             Loss value
         """
         # Forward pass
-        logits = self.transformer.forward(src_batch, tgt_batch)
+        # Build padding mask (assume PAD=0)
+        src_pad_mask = (src_batch == 0)
+        logits = self.transformer.forward(src_batch, tgt_batch, src_key_padding_mask=src_pad_mask)
         
         # Compute loss
         loss, _ = self.cross_entropy_loss(logits, tgt_batch)
