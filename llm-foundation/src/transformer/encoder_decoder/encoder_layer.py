@@ -35,7 +35,7 @@ class EncoderLayer:
         self.norm1 = LayerNormalization(d_model)
         self.norm2 = LayerNormalization(d_model)
     
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: np.ndarray, src_key_padding_mask: np.ndarray | None = None) -> np.ndarray:
         """
         Forward pass through encoder layer
         
@@ -46,7 +46,7 @@ class EncoderLayer:
             Output tensor
         """
         # Self-attention with residual connection
-        attn_output, _ = self.self_attention.forward(x, x, x)
+        attn_output, _ = self.self_attention.forward(x, x, x, src_key_padding_mask)
         x = self.norm1(x + attn_output)
         
         # Feed-forward with residual connection
