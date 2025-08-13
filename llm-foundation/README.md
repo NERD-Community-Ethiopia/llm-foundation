@@ -65,6 +65,32 @@ llm-foundation/
 └── README.md                   # This file
 ```
 
+## Amharic→Oromiffa (Checkpoint 5)
+
+Minimal scaffolding is provided to start training a Transformer on a real bilingual task.
+
+- Tokenizer: initial whitespace-based tokenizer (can be replaced by SentencePiece later)
+- Files added:
+  - `src/data/am_om_dataset.py`: load TSV pairs, build tokenizer, encode/pad
+  - `src/data/dataloader.py`: very small batch iterator (numpy arrays)
+  - `configs/transformer_am_om.json`: small model config for quick runs
+  - `scripts/train_am_om.py`: training entry point
+
+Usage (example):
+```bash
+# Train (expects UTF-8 TSV files with: <amharic>\t<oromiffa>)
+python scripts/train_am_om.py \
+  --train data/am_om_train.tsv \
+  --val data/am_om_val.tsv \
+  --config configs/transformer_am_om.json \
+  --tokenizer-output data/am_om_ws_tokenizer.json
+```
+
+Notes:
+- Start with small configs, then scale up
+- Replace the tokenizer with SentencePiece for better subword coverage when data is ready
+
+
 ### 4. Development Workflow
 ```bash
 # Switch to checkpoint branch

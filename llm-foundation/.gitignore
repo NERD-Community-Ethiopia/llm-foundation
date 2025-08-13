@@ -1,3 +1,40 @@
+# Virtual environments
+venv/
+.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+
+# Tools & IDE
+.mypy_cache/
+.pytest_cache/
+.idea/
+.vscode/
+.DS_Store
+.env
+
+# Training artifacts (keep code under src/data tracked)
+checkpoints/
+!src/data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -44,9 +81,9 @@ coverage.xml
 .dmypy.json
 dmypy.json
 
-# Data, models, and outputs
-data/
-models/
+# Data, models, and outputs (ignore only top-level dirs)
+/data/
+/models/
 
 # FastAPI/Gradio/other local server artifacts
 *.db
